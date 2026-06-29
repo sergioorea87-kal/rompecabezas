@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🧩 Rompecabezas</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f0f13;color:#eee;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 14px;gap:16px}
+h1{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,#7c6af7,#f76a8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
+p.sub{color:#888;font-size:.85rem;text-align:center;max-width:420px;line-height:1.55}
+.card{background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:22px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px}
+.field label{font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px}
+input[type=text],select{background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:9px 12px;font-size:.88rem;font-family:inherit;width:100%;outline:none;-webkit-appearance:none}
+input[type=text]:focus,select:focus{border-color:#7c6af7}
+input[type=text]::placeholder{color:#555}
+button.gen{width:100%;padding:13px;border-radius:10px;border:none;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7c6af7,#f76a8a);color:#fff;-webkit-tap-highlight-color:transparent}
+button.gen:disabled{opacity:.35;cursor:default}
+#status{font-size:.82rem;text-align:center;min-height:18px;color:#aaa}
+.link-box{display:none;flex-direction:column;gap:10px;background:#111;border:1px solid #2a2a3a;border-radius:10px;padding:14px}
+.link-box p{font-size:.8rem;color:#aaa}
+.link-url{font-size:.72rem;color:#7c6af7;word-break:break-all;background:#0a0a10;border-radius:6px;padding:8px;border:1px solid #2a2a3a;font-family:monospace}
+button.copy{padding:9px;border-radius:8px;border:none;font-size:.88rem;font-weight:600;cursor:pointer;background:#7c6af7;color:#fff;width:100%;-webkit-tap-highlight-color:transparent}
+button.copy.done{background:#22c55e}
+.steps{max-width:480px;width:100%;display:flex;flex-direction:column;gap:8px}
+.step{display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:#888;line-height:1.5}
+.step .n{background:#7c6af7;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;margin-top:2px}
+.step strong{color:#ccc}
+#game-section{display:none;flex-direction:column;align-items:center;gap:12px;width:100%}
+.stats{display:flex;gap:14px;font-size:.75rem;color:#888}
+.stats strong{color:#eee}
+.boards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:4px}
+.lbl{font-size:.65rem;color:#555;text-transform:uppercase;letter-spacing:.07em;text-align:center}
+#board{position:relative;background:#1a1a24;border:1px solid #2a2a3a;border-radius:8px;overflow:hidden}
+.slot{position:absolute;border:1px solid rgba(255,255,255,.04)}
+.slot.hl{outline:2px dashed #7c6af7;outline-offset:-2px}
+#tray{background:#1a1a24;border:1px solid #2a2a3a;border-radius:8px;padding:6px;display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start}
+canvas.piece{cursor:grab;border:1px solid rgba(255,255,255,.07);border-radius:2px;display:block;flex-shrink:0;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas.piece:hover{outline:1px solid #7c6af7}
+.ghost{opacity:.15}
+.floating{position:fixed;z-index:9999;cursor:grabbing;border:1px solid #7c6af7;border-radius:2px;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.7)}
+canvas.onboard{position:absolute;border:1px solid transparent;border-radius:2px;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas.onboard:hover{border-color:#7c6af7;z-index:10}
+.hint-flash{outline:2px solid #f76a8a!important}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+button.sm{padding:7px 14px;border-radius:8px;border:1px solid #444;font-size:.82rem;font-weight:600;cursor:pointer;background:#1a1a24;color:#eee;-webkit-tap-highlight-color:transparent}
+button.sm:active{opacity:.7}
+#win{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;justify-content:center;align-items:center}
+#win.show{display:flex}
+.wb{background:#1a1a24;border:1px solid #2a2a3a;border-radius:14px;padding:32px 36px;text-align:center;display:flex;flex-direction:column;gap:10px;max-width:260px;width:88%}
+.wb h2{font-size:1.5rem}.wb p{color:#888;font-size:.82rem}
+.wt{font-size:1.8rem;font-weight:700;color:#7c6af7}
+.pri{background:linear-gradient(135deg,#7c6af7,#f76a8a);border:none;color:#fff;padding:9px 18px;border-radius:8px;font-weight:600;cursor:pointer;margin-top:4px}
+#loading{text-align:center;color:#888;font-size:.9rem;padding:40px}
+</style>
+</head>
+<body>
+
+<div id="gen-section">
+  <h1>🧩 Generador de Rompecabezas</h1>
+  <p class="sub">Sube tu foto a imgbb.com, pega el link directo y genera el rompecabezas para compartir.</p>
+
+  <div class="card">
+    <div class="field">
+      <label>Link directo de la imagen (de imgbb.com)</label>
+      <input type="text" id="img-url" placeholder="https://i.ibb.co/xxx/foto.jpg">
+    </div>
+    <div class="field">
+      <label>Dificultad</label>
+      <select id="grid-sel">
+        <option value="3">3×3 — Fácil (9 piezas)</option>
+        <option value="4" selected>4×4 — Normal (16 piezas)</option>
+        <option value="5">5×5 — Difícil (25 piezas)</option>
+        <option value="6">6×6 — Experto (36 piezas)</option>
+      </select>
+    </div>
+    <div id="status"></div>
+    <button class="gen" id="btn-gen">🔗 Generar link</button>
+    <div class="link-box" id="link-box">
+      <p>¡Listo! Manda este link por WhatsApp:</p>
+      <div class="link-url" id="link-url"></div>
+      <button class="copy" id="btn-copy">📋 Copiar link</button>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="n">1</div><span>Ve a <strong>imgbb.com</strong>, sube tu foto y copia el link que dice <strong>"Direct link"</strong> (termina en .jpg o .png).</span></div>
+    <div class="step"><div class="n">2</div><span>Pega ese link arriba, elige dificultad y genera el link del rompecabezas.</span></div>
+    <div class="step"><div class="n">3</div><span>Manda el link por WhatsApp. Quien lo abra verá solo las piezas — sin imagen de referencia.</span></div>
+  </div>
+</div>
+
+<div id="game-section">
+  <h1>🧩 Rompecabezas</h1>
+  <div id="loading">Cargando imagen…</div>
+  <div id="game-content" style="display:none;flex-direction:column;align-items:center;gap:12px;width:100%">
+    <div class="stats">
+      <span>⏱ <strong id="tm">0:00</strong></span>
+      <span>Piezas: <strong id="pl">0</strong>/<strong id="tt">0</strong></span>
+      <span>Movimientos: <strong id="mv">0</strong></span>
+    </div>
+    <div class="boards">
+      <div class="col"><span class="lbl">Tablero</span><div id="board"></div></div>
+      <div class="col">
+        <span class="lbl">Piezas</span>
+        <div id="tray"></div>
+        <div class="row" style="margin-top:6px">
+          <button class="sm" id="bh">💡 Pista</button>
+          <button class="sm" id="bs">🔀 Mezclar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="win">
+  <div class="wb">
+    <h2>🎉 ¡Felicidades!</h2>
+    <p>Completaste el rompecabezas en</p>
+    <div class="wt" id="wt"></div>
+    <p id="wm"></p>
+    <button class="pri" id="ba">Jugar de nuevo</button>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const imgParam = params.get('img');
+const gridParam = parseInt(params.get('g')) || 4;
+
+if (imgParam) {
+  document.getElementById('gen-section').style.display = 'none';
+  document.getElementById('game-section').style.display = 'flex';
+  loadGame(decodeURIComponent(imgParam), gridParam);
+} else {
+  initGenerator();
+}
+
+function initGenerator() {
+  const imgUrl = document.getElementById('img-url');
+  const gs = document.getElementById('grid-sel');
+  const btnGen = document.getElementById('btn-gen');
+  const stEl = document.getElementById('status');
+  const linkBox = document.getElementById('link-box');
+  const linkUrl = document.getElementById('link-url');
+  const btnCopy = document.getElementById('btn-copy');
+
+  btnGen.addEventListener('click', () => {
+    const url = imgUrl.value.trim();
+    if (!url || !url.startsWith('http')) { stEl.textContent = 'Pega un link válido de imgbb.com'; return; }
+    const gameUrl = location.origin + location.pathname + '?g=' + gs.value + '&img=' + encodeURIComponent(url);
+    linkUrl.textContent = gameUrl;
+    linkBox.style.display = 'flex';
+    stEl.textContent = '';
+  });
+
+  btnCopy.addEventListener('click', () => {
+    const url = linkUrl.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(flashCopy);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove(); flashCopy();
+    }
+    function flashCopy() {
+      btnCopy.textContent = '✅ ¡Copiado!'; btnCopy.classList.add('done');
+      setTimeout(() => { btnCopy.textContent = '📋 Copiar link'; btnCopy.classList.remove('done'); }, 2000);
+    }
+  });
+}
+
+function loadGame(imgSrc, G) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('game-content').style.display = 'flex';
+    startGame(img, G);
+  };
+  img.onerror = () => {
+    document.getElementById('loading').innerHTML = '<p style="color:#f76a8a;text-align:center">No se pudo cargar la imagen.<br>Verifica que el link sea el <strong>Direct link</strong> de imgbb.com</p>';
+  };
+  img.src = imgSrc;
+}
+
+function startGame(img, G) {
+  const boardEl=document.getElementById('board'), trayEl=document.getElementById('tray'),
+    tmEl=document.getElementById('tm'), plEl=document.getElementById('pl'),
+    ttEl=document.getElementById('tt'), mvEl=document.getElementById('mv'),
+    winDiv=document.getElementById('win'), wtEl=document.getElementById('wt'), wmEl=document.getElementById('wm');
+
+  let bW,bH,pW,pH,pieces=[],placed=0,moves=0,total=G*G;
+  let timerID=null,t0=null,drag=null;
+
+  function init() {
+    boardEl.innerHTML=''; trayEl.innerHTML='';
+    pieces=[]; placed=0; moves=0;
+    ttEl.textContent=total; plEl.textContent=0; mvEl.textContent=0;
+    const maxW=Math.min(Math.floor(window.innerWidth*0.5),320);
+    const ratio=img.naturalHeight/img.naturalWidth;
+    bW=maxW; bH=Math.round(maxW*ratio);
+    pW=Math.floor(bW/G); pH=Math.floor(bH/G);
+    bW=pW*G; bH=pH*G;
+    boardEl.style.width=bW+'px'; boardEl.style.height=bH+'px';
+    trayEl.style.width=Math.max(bW,100)+'px';
+    for(let r=0;r<G;r++)for(let c=0;c<G;c++){
+      const s=document.createElement('div'); s.className='slot';
+      s.style.cssText='left:'+(c*pW)+'px;top:'+(r*pH)+'px;width:'+pW+'px;height:'+pH+'px';
+      s.dataset.r=r; s.dataset.c=c; boardEl.appendChild(s);
+    }
+    for(let r=0;r<G;r++)for(let c=0;c<G;c++){
+      const id=r*G+c;
+      const cv=document.createElement('canvas'); cv.width=pW; cv.height=pH;
+      cv.getContext('2d').drawImage(img,c*(img.naturalWidth/G),r*(img.naturalHeight/G),img.naturalWidth/G,img.naturalHeight/G,0,0,pW,pH);
+      const el=document.createElement('canvas'); el.width=pW; el.height=pH;
+      el.getContext('2d').drawImage(cv,0,0);
+      el.className='piece'; el.dataset.id=id; el.dataset.r=r; el.dataset.c=c;
+      addDrag(el,false); trayEl.appendChild(el);
+      pieces.push({id,row:r,col:c,placed:false,cv,el});
+    }
+    shuffle();
+    if(timerID)clearInterval(timerID);
+    t0=Date.now();
+    timerID=setInterval(()=>{tmEl.textContent=fmt(Math.floor((Date.now()-t0)/1000));},500);
+  }
+
+  function shuffle(){const k=[...trayEl.children];for(let i=k.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));trayEl.appendChild(k[j]);}}
+
+  function addDrag(el,fb){
+    el.addEventListener('mousedown',e=>{e.preventDefault();sd(el,fb,e.clientX,e.clientY);});
+    el.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];sd(el,fb,t.clientX,t.clientY);},{passive:false});
+  }
+
+  function sd(el,fb,cx,cy){
+    const id=+el.dataset.id,p=pieces[id];
+    const fl=document.createElement('canvas');fl.width=pW;fl.height=pH;
+    fl.getContext('2d').drawImage(p.cv,0,0);
+    fl.className='floating';fl.style.width=pW+'px';fl.style.height=pH+'px';
+    const rr=el.getBoundingClientRect();
+    const ox=cx-rr.left,oy=cy-rr.top;
+    fl.style.left=(cx-ox)+'px';fl.style.top=(cy-oy)+'px';
+    document.body.appendChild(fl);el.classList.add('ghost');
+    if(fb){p.placed=false;placed--;updateStats();}
+    drag={p,el,fl,ox,oy,fb};
+  }
+
+  document.addEventListener('mousemove',e=>md(e.clientX,e.clientY));
+  document.addEventListener('touchmove',e=>{const t=e.touches[0];md(t.clientX,t.clientY);e.preventDefault();},{passive:false});
+  function md(cx,cy){
+    if(!drag)return;
+    drag.fl.style.left=(cx-drag.ox)+'px';drag.fl.style.top=(cy-drag.oy)+'px';
+    document.querySelectorAll('.slot.hl').forEach(s=>s.classList.remove('hl'));
+    const sl=slotAt(cx,cy);if(sl)sl.classList.add('hl');
+  }
+
+  document.addEventListener('mouseup',e=>ed(e.clientX,e.clientY));
+  document.addEventListener('touchend',e=>{const t=e.changedTouches[0];ed(t.clientX,t.clientY);});
+  function ed(cx,cy){
+    if(!drag)return;
+    document.querySelectorAll('.slot.hl').forEach(s=>s.classList.remove('hl'));
+    const{p,el,fl,fb}=drag;drag=null;fl.remove();el.classList.remove('ghost');
+    const sl=slotAt(cx,cy);
+    const ok=sl&&+sl.dataset.r===p.row&&+sl.dataset.c===p.col;
+    if(ok){
+      el.remove();
+      const pc=document.createElement('canvas');pc.width=pW;pc.height=pH;
+      pc.getContext('2d').drawImage(p.cv,0,0);
+      pc.className='onboard';
+      pc.style.cssText='width:'+pW+'px;height:'+pH+'px;left:'+(p.col*pW)+'px;top:'+(p.row*pH)+'px';
+      pc.dataset.id=p.id;pc.dataset.r=p.row;pc.dataset.c=p.col;
+      addDrag(pc,true);boardEl.appendChild(pc);
+      p.placed=true;p.el=pc;placed++;moves++;updateStats();checkWin();
+    }else{
+      if(fb){
+        el.remove();
+        const tp=document.createElement('canvas');tp.width=pW;tp.height=pH;
+        tp.getContext('2d').drawImage(p.cv,0,0);
+        tp.className='piece';tp.dataset.id=p.id;tp.dataset.r=p.row;tp.dataset.c=p.col;
+        addDrag(tp,false);trayEl.appendChild(tp);p.el=tp;
+      }
+      moves++;updateStats();
+    }
+  }
+
+  function slotAt(cx,cy){
+    const r=boardEl.getBoundingClientRect();
+    const x=cx-r.left,y=cy-r.top;
+    if(x<0||y<0||x>=bW||y>=bH)return null;
+    const c=Math.floor(x/pW),row=Math.floor(y/pH);
+    if(row>=G||c>=G)return null;
+    if(boardEl.querySelector('.onboard[data-r="'+row+'"][data-c="'+c+'"]'))return null;
+    return boardEl.querySelector('.slot[data-r="'+row+'"][data-c="'+c+'"]');
+  }
+
+  document.getElementById('bh').addEventListener('click',()=>{
+    const up=pieces.filter(p=>!p.placed);if(!up.length)return;
+    const p=up[Math.floor(Math.random()*up.length)];
+    const sl=boardEl.querySelector('.slot[data-r="'+p.row+'"][data-c="'+p.col+'"]');
+    if(sl){sl.classList.add('hl');setTimeout(()=>sl.classList.remove('hl'),1400);}
+    if(p.el){p.el.classList.add('hint-flash');setTimeout(()=>p.el.classList.remove('hint-flash'),1400);}
+  });
+  document.getElementById('bs').addEventListener('click',shuffle);
+  document.getElementById('ba').addEventListener('click',()=>{winDiv.classList.remove('show');init();});
+
+  function fmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);}
+  function updateStats(){plEl.textContent=placed;ttEl.textContent=total;mvEl.textContent=moves;}
+  function checkWin(){
+    if(placed<total)return;clearInterval(timerID);timerID=null;
+    const s=Math.floor((Date.now()-t0)/1000);
+    setTimeout(()=>{wtEl.textContent=fmt(s);wmEl.textContent=moves+' movimientos';winDiv.classList.add('show');},400);
+  }
+
+  init();
+}
+</script>
+</body>
+</html>
